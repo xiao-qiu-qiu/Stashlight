@@ -10,6 +10,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.Map;
 public class Serializer {
     private final Path file;
     private final HolderLookup.Provider lookup;
+    private boolean loadSucceeded = true;
 
     private static final String NBT_CONTAINER_NAME_KEY = "name";
     private static final String NBT_CONTAINER_CAPACITY_KEY = "capacity";
@@ -29,25 +31,35 @@ public class Serializer {
         this.lookup = lookup;
     }
 
+    public boolean loadSucceeded() {
+        return loadSucceeded;
+    }
+
     public Map<String, Map<BlockPos, ContainerSnapshot>> read() {
         Map<String, Map<BlockPos, ContainerSnapshot>> database = new HashMap<>();
+        loadSucceeded = true;
         if (file == null || !Files.exists(file)) return database;
 
         try {
             CompoundTag root = NbtIo.readCompressed(file, NbtAccounter.unlimitedHeap());
 
+            int containers = 0;
             for (String dim : root.keySet()) {
-                root.getCompound(dim).ifPresent(dimTag -> {
-                    Map<BlockPos, ContainerSnapshot> posMap = new HashMap<>();
-                    for (String key : dimTag.keySet()) {
-                        BlockPos pos = BlockPos.of(Long.parseLong(key));
-                        dimTag.getCompound(key).ifPresent(snapNbt -> posMap.put(pos, deserializeSnapshot(snapNbt)));
-                    }
-                    database.put(dim, posMap);
-                });
+                CompoundTag dimTag = root.getCompound(dim).orElse(null);
+                if (dimTag == null) continue;
+                Map<BlockPos, ContainerSnapshot> posMap = new HashMap<>();
+                for (String key : dimTag.keySet()) {
+                    BlockPos pos = BlockPos.of(Long.parseLong(key));
+                    dimTag.getCompound(key).ifPresent(snapNbt -> posMap.put(pos, deserializeSnapshot(snapNbt)));
+                }
+                containers += posMap.size();
+                database.put(dim, posMap);
             }
+            Stashlight.LOGGER.info("Loaded {} cached containers from {}", containers, file.getFileName());
         } catch (Exception e) {
-            Stashlight.LOGGER.error("Load failed", e);
+            loadSucceeded = false;
+            Stashlight.LOGGER.error("Load failed; existing cache file will not be overwritten", e);
+            return new HashMap<>();
         }
         return database;
     }
@@ -62,10 +74,20 @@ public class Serializer {
             root.put(dim, dimTag);
         });
 
+        Path tmp = file.resolveSibling(file.getFileName().toString() + ".tmp");
         try {
-            NbtIo.writeCompressed(root, file);
+            NbtIo.writeCompressed(root, tmp);
+            try {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (Exception e) {
             Stashlight.LOGGER.error("Save failed", e);
+            try {
+                Files.deleteIfExists(tmp);
+            } catch (Exception ignored) {
+            }
         }
     }
 

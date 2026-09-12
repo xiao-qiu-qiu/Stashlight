@@ -47,40 +47,34 @@ public class ContainerRepository {
 
         if (dataMap == null || dataMap.isEmpty()) return;
 
-        cleanupExecutor.submit(() -> {
-            // Step 1: Collect positions to check (quick, inside lock)
-            List<BlockPos> toCheck;
-            synchronized (CONTAINER_ENTRIES_MAP) {
-                toCheck = new ArrayList<>(dataMap.keySet());
-            }
+        // World access must stay on the client thread. Off-thread getBlockState
+        // can return air for still-loading chunks and wipe valid cache entries.
+        List<BlockPos> toCheck;
+        synchronized (CONTAINER_ENTRIES_MAP) {
+            toCheck = new ArrayList<>(dataMap.keySet());
+        }
 
-            // Step 2: Check world state (slow, OUTSIDE lock - doesn't block other operations)
-            List<BlockPos> toRemove = new ArrayList<>();
-            for (BlockPos pos : toCheck) {
-                try {
-                    if (world.getChunkSource().hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) {
-                        var state = world.getBlockState(pos);
-                        if (!Util.isValidSearchableContainer(state)) {
-                            toRemove.add(pos);
-                        }
-                    }
-                } catch (Exception e) {
-                    // Skip this position if world access fails
-                }
+        List<BlockPos> toRemove = new ArrayList<>();
+        for (BlockPos pos : toCheck) {
+            if (!world.getChunkSource().hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) {
+                continue;
             }
-
-
-            if (!toRemove.isEmpty()) {
-                synchronized (CONTAINER_ENTRIES_MAP) {
-                    for (BlockPos pos : toRemove) {
-                        dataMap.remove(pos);
-                        removeFromIndex(dimension, pos);
-                    }
-                    this.isDirty = true;
-                }
-                saveIfDirty();
+            var state = world.getBlockState(pos);
+            if (!Util.isValidSearchableContainer(state)) {
+                toRemove.add(pos);
             }
-        });
+        }
+
+        if (toRemove.isEmpty()) return;
+
+        synchronized (CONTAINER_ENTRIES_MAP) {
+            for (BlockPos pos : toRemove) {
+                dataMap.remove(pos);
+                removeFromIndex(dimension, pos);
+            }
+            this.isDirty = true;
+        }
+        saveIfDirty();
     }
 
     public void update(String dimension, BlockPos pos, String blockName, int capacity, List<ItemStack> stacks) {
@@ -207,9 +201,6 @@ public class ContainerRepository {
     }
 
     public void shutdown() {
-        // Flush any pending dirty state, then wait for the executor to finish
-        // so the final save completes before the game disconnects.
-        saveIfDirty();
         cleanupExecutor.shutdown();
         try {
             if (!cleanupExecutor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
@@ -217,6 +208,16 @@ public class ContainerRepository {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        }
+
+        if (!serializer.loadSucceeded()) {
+            Stashlight.LOGGER.warn("Skipping cache save because the file failed to load");
+            return;
+        }
+
+        synchronized (CONTAINER_ENTRIES_MAP) {
+            serializer.write(CONTAINER_ENTRIES_MAP);
+            this.isDirty = false;
         }
     }
 }
