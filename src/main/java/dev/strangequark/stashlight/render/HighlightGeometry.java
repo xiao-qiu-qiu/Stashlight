@@ -17,10 +17,8 @@ public final class HighlightGeometry {
 
     /** Gold tracer: distinct from the white wireframe, still readable on most backgrounds. */
     private static final float TR = 1f, TG = 0.82f, TB = 0.18f, TA = 0.95f;
-    private static final float TRACER_NEAR = 0.25f;
-    private static final float TRACER_HALF_START = 0.006f;
-    private static final float TRACER_HALF_END_BASE = 0.018f;
-    private static final float TRACER_HALF_END_MAX = 0.07f;
+    private static final float TRACER_NEAR = 0.2f;
+    private static final float TRACER_HALF = 0.004f;
 
 
     static void drawWireframeBox(PoseStack matrices, VertexConsumer vc, Vec3 cam, BlockPos pos) {
@@ -50,7 +48,7 @@ public final class HighlightGeometry {
     }
 
     /**
-     * Camera-relative ribbon from just in front of the camera (the crosshair)
+     * Uniform-width ribbon from just in front of the camera (the crosshair)
      * to the block centre. Two crossed quads so the line stays visible from the side.
      */
     static void drawTracer(PoseStack matrices, VertexConsumer vc, Camera camera, BlockPos pos) {
@@ -72,9 +70,6 @@ public final class HighlightGeometry {
         float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (len < 1.0e-3f) return;
 
-        float halfEnd = Math.min(TRACER_HALF_END_BASE + len * 0.00035f, TRACER_HALF_END_MAX);
-
-        // Perpendicular to both the tracer and camera-up → camera-facing ribbon.
         float px = dy * up.z() - dz * up.y();
         float py = dz * up.x() - dx * up.z();
         float pz = dx * up.y() - dy * up.x();
@@ -91,25 +86,18 @@ public final class HighlightGeometry {
         pz /= plen;
 
         Matrix4f mat = matrices.last().pose();
-        drawTaperedRibbon(vc, mat,
-                sx, sy, sz, ex, ey, ez,
-                px, py, pz,
-                TRACER_HALF_START, halfEnd);
-        drawTaperedRibbon(vc, mat,
-                sx, sy, sz, ex, ey, ez,
-                up.x(), up.y(), up.z(),
-                TRACER_HALF_START, halfEnd);
+        drawRibbon(vc, mat, sx, sy, sz, ex, ey, ez, px, py, pz);
+        drawRibbon(vc, mat, sx, sy, sz, ex, ey, ez, up.x(), up.y(), up.z());
     }
 
-    private static void drawTaperedRibbon(VertexConsumer vc, Matrix4f mat,
-                                          float sx, float sy, float sz,
-                                          float ex, float ey, float ez,
-                                          float nx, float ny, float nz,
-                                          float halfStart, float halfEnd) {
-        float s0x = sx - nx * halfStart, s0y = sy - ny * halfStart, s0z = sz - nz * halfStart;
-        float s1x = sx + nx * halfStart, s1y = sy + ny * halfStart, s1z = sz + nz * halfStart;
-        float e0x = ex - nx * halfEnd, e0y = ey - ny * halfEnd, e0z = ez - nz * halfEnd;
-        float e1x = ex + nx * halfEnd, e1y = ey + ny * halfEnd, e1z = ez + nz * halfEnd;
+    private static void drawRibbon(VertexConsumer vc, Matrix4f mat,
+                                   float sx, float sy, float sz,
+                                   float ex, float ey, float ez,
+                                   float nx, float ny, float nz) {
+        float s0x = sx - nx * TRACER_HALF, s0y = sy - ny * TRACER_HALF, s0z = sz - nz * TRACER_HALF;
+        float s1x = sx + nx * TRACER_HALF, s1y = sy + ny * TRACER_HALF, s1z = sz + nz * TRACER_HALF;
+        float e0x = ex - nx * TRACER_HALF, e0y = ey - ny * TRACER_HALF, e0z = ez - nz * TRACER_HALF;
+        float e1x = ex + nx * TRACER_HALF, e1y = ey + ny * TRACER_HALF, e1z = ez + nz * TRACER_HALF;
 
         tracerVertex(vc, mat, s0x, s0y, s0z);
         tracerVertex(vc, mat, s1x, s1y, s1z);

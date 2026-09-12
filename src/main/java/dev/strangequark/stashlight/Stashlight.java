@@ -1,6 +1,7 @@
 package dev.strangequark.stashlight;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.strangequark.stashlight.render.HighlightManager;
 import dev.strangequark.stashlight.render.HighlightRenderer;
 import dev.strangequark.stashlight.repository.ContainerRepository;
 import dev.strangequark.stashlight.screen.SearchScreen;
@@ -104,6 +105,7 @@ public class Stashlight implements ClientModInitializer {
                 repository.shutdown();
 
             }
+            HighlightManager.clearAll();
             serializer = null;
             repository = null;
         });
@@ -114,6 +116,7 @@ public class Stashlight implements ClientModInitializer {
         BlockState state = level.getBlockState(pos);
         if (Util.isValidSearchableContainer(state)) {
             lastOpened = pos;
+            HighlightManager.removeContainer(level, pos);
         }
         return InteractionResult.PASS;
     }
@@ -127,6 +130,7 @@ public class Stashlight implements ClientModInitializer {
         BlockPos canonicalPos = Util.getCanonicalPos(clientLevel, blockPos);
         String dimension = Util.getDimensionName(clientLevel);
         repository.remove(dimension, canonicalPos);
+        HighlightManager.removeContainer(clientLevel, blockPos);
     }
 
 

@@ -18,7 +18,14 @@
   "key.stashlight.search_menu": "搜索菜单",
   "modmenu.descriptionTranslation.stashlight": "缓存箱子内容，并通过游戏内菜单搜索物品。",
   "render.stashlight.highlight.incorrectDimension": "该容器位于其他维度",
+  "render.stashlight.highlight.inventoryEmpty": "背包是空的",
+  "render.stashlight.highlight.inventoryNone": "没有找到对应的箱子",
+  "render.stashlight.highlight.inventoryMarked": "已高亮 %s 个箱子",
   "screen.stashlight.label.searchContainers": "搜索容器",
   "screen.stashlight.lookAtTarget": "看向目标",
-  "screen.stashlight.showSmallContainers": "显示小型容器（少于 9 格）"
+  "screen.stashlight.showSmallContainers": "显示小型容器（少于 9 格）",
+  "screen.stashlight.highlightInventory": "高亮背包物品",
+  "screen.stashlight.highlightInventory.tooltip": "高亮所有装有背包内物品的容器，并显示追踪线",
+  "screen.stashlight.clearHighlights": "清除全部渲染",
+  "screen.stashlight.clearHighlights.tooltip": "清除所有高亮与追踪线"
 }

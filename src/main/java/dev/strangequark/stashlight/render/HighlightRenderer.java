@@ -8,27 +8,29 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.List;
+
 public final class HighlightRenderer {
 
     private HighlightRenderer() {
     }
 
     public static void render(LevelRenderContext context) {
+        HighlightManager.removeExpired();
+        List<HighlightPos> active = HighlightManager.getActiveHighlights();
+        if (active.isEmpty()) return;
+
         VertexConsumer vc = context.bufferSource().getBuffer(HighlightRenderLayer.XRAY_LAYER);
         Camera camera = context.gameRenderer().getMainCamera();
         Vec3 cam = camera.position();
 
-        HighlightManager.removeExpired();
-
         PoseStack matrices = context.poseStack();
-        for (HighlightPos highlight : HighlightManager.getActiveHighlights()) {
+        for (HighlightPos highlight : active) {
             long elapsed = System.currentTimeMillis() - highlight.startTimeMillis();
 
-            // Tracer stays visible for the whole highlight lifetime so the heading
-            // is not lost during the wireframe blink-off.
             HighlightGeometry.drawTracer(matrices, vc, camera, highlight.pos());
 
-            if (!HighlightEffect.shouldRender(elapsed)) continue;
+            if (!highlight.persistent() && !HighlightEffect.shouldRender(elapsed)) continue;
 
             matrices.pushPose();
             matrices.translate(

@@ -5,6 +5,8 @@ import dev.strangequark.stashlight.gui.ItemGrid;
 import dev.strangequark.stashlight.logic.filter.*;
 import dev.strangequark.stashlight.logic.sort.SortManager;
 import dev.strangequark.stashlight.model.IndexedItem;
+import dev.strangequark.stashlight.model.StackKey;
+import dev.strangequark.stashlight.render.HighlightManager;
 import dev.strangequark.stashlight.repository.ContainerRepository;
 import dev.strangequark.stashlight.util.Util;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
@@ -13,13 +15,19 @@ import io.wispforest.owo.ui.container.FlowLayout;
 import io.wispforest.owo.ui.container.ScrollContainer;
 import io.wispforest.owo.ui.container.UIContainers;
 import io.wispforest.owo.ui.core.*;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static dev.strangequark.stashlight.gui.UIStyle.*;
@@ -163,7 +171,11 @@ public class SearchScreen extends BaseOwoScreen<FlowLayout> {
         gridWrapper.child(scrollContainer);
 
         // --- 4. FOOTER ---
-        FlowLayout footer = (FlowLayout) UIContainers.horizontalFlow(Sizing.fill(100), Sizing.fixed(COMPONENT_HEIGHT))
+        FlowLayout footer = (FlowLayout) UIContainers
+                .verticalFlow(Sizing.fill(100), Sizing.content())
+                .gap(GAP);
+
+        FlowLayout optionsRow = (FlowLayout) UIContainers.horizontalFlow(Sizing.fill(100), Sizing.fixed(COMPONENT_HEIGHT))
                 .gap(GAP)
                 .verticalAlignment(VerticalAlignment.CENTER);
 
@@ -198,7 +210,24 @@ public class SearchScreen extends BaseOwoScreen<FlowLayout> {
             refreshGrid(searchField.getValue());
         });
 
-        footer.child(distanceSlider).child(lookAtCheckbox).child(showSmallCheckbox);
+        optionsRow.child(distanceSlider).child(lookAtCheckbox).child(showSmallCheckbox);
+
+        FlowLayout actionsRow = (FlowLayout) UIContainers.horizontalFlow(Sizing.fill(100), Sizing.fixed(COMPONENT_HEIGHT))
+                .gap(GAP)
+                .verticalAlignment(VerticalAlignment.CENTER);
+
+        ButtonComponent highlightInvBtn = (ButtonComponent) UIComponents
+                .button(Component.translatable("screen.stashlight.highlightInventory"), b -> highlightInventoryContainers())
+                .tooltip(Component.translatable("screen.stashlight.highlightInventory.tooltip"))
+                .sizing(Sizing.content(), Sizing.fixed(COMPONENT_HEIGHT));
+
+        ButtonComponent clearHighlightsBtn = (ButtonComponent) UIComponents
+                .button(Component.translatable("screen.stashlight.clearHighlights"), b -> HighlightManager.clearAll())
+                .tooltip(Component.translatable("screen.stashlight.clearHighlights.tooltip"))
+                .sizing(Sizing.content(), Sizing.fixed(COMPONENT_HEIGHT));
+
+        actionsRow.child(highlightInvBtn).child(clearHighlightsBtn);
+        footer.child(optionsRow).child(actionsRow);
 
         // --- ASSEMBLE ---
         mainWindow.child(title).child(searchBar).child(gridWrapper).child(footer);
@@ -228,6 +257,58 @@ public class SearchScreen extends BaseOwoScreen<FlowLayout> {
         if (sortManager.getCurrent() != null) sortManager.getCurrent().sort(sortedItems);
 
         this.itemGrid.setItems(sortedItems, slotsPerRow);
+    }
+
+    private void highlightInventoryContainers() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+
+        Set<StackKey> inventoryKeys = new HashSet<>();
+        for (ItemStack stack : mc.player.getInventory().getNonEquipmentItems()) {
+            if (stack != null && !stack.isEmpty()) {
+                inventoryKeys.add(new StackKey(stack));
+            }
+        }
+
+        if (inventoryKeys.isEmpty()) {
+            mc.player.sendOverlayMessage(
+                    Component.translatable("render.stashlight.highlight.inventoryEmpty").withStyle(ChatFormatting.YELLOW));
+            return;
+        }
+
+        String currentDim = Util.getDimensionName(mc.level);
+        Set<BlockPos> positions = new LinkedHashSet<>();
+        for (IndexedItem item : repository.getSearchIndex()) {
+            if (!currentDim.equals(item.dimension())) continue;
+            if (!filterManager.matches(item)) continue;
+            if (stackMatchesInventory(item.stack(), inventoryKeys)) {
+                positions.add(item.pos());
+            }
+        }
+
+        int count = HighlightManager.highlightPersistent(positions);
+        if (count == 0) {
+            mc.player.sendOverlayMessage(
+                    Component.translatable("render.stashlight.highlight.inventoryNone").withStyle(ChatFormatting.YELLOW));
+            return;
+        }
+
+        mc.player.sendOverlayMessage(
+                Component.translatable("render.stashlight.highlight.inventoryMarked", count).withStyle(ChatFormatting.GREEN));
+        mc.setScreen(null);
+    }
+
+    private static boolean stackMatchesInventory(ItemStack stack, Set<StackKey> inventoryKeys) {
+        if (stack == null || stack.isEmpty()) return false;
+        if (inventoryKeys.contains(new StackKey(stack))) return true;
+
+        var container = stack.get(DataComponents.CONTAINER);
+        if (container != null && container.nonEmptyItemCopyStream().anyMatch(inner -> stackMatchesInventory(inner, inventoryKeys))) {
+            return true;
+        }
+
+        var bundle = stack.get(DataComponents.BUNDLE_CONTENTS);
+        return bundle != null && bundle.itemCopyStream().anyMatch(inner -> stackMatchesInventory(inner, inventoryKeys));
     }
 
     public static boolean matchesDeep(IndexedItem item, String lowerQuery) {

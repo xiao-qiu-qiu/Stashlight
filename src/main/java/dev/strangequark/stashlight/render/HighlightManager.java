@@ -5,11 +5,14 @@ import dev.strangequark.stashlight.model.IndexedItem;
 import dev.strangequark.stashlight.util.Util;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public final class HighlightManager {
@@ -29,24 +32,59 @@ public final class HighlightManager {
             return false;
         }
 
-        highlights.add(new HighlightPos(item.pos(), System.currentTimeMillis()));
+        if (isPersistent(item.pos())) return true;
+
+        highlights.add(new HighlightPos(item.pos(), System.currentTimeMillis(), false));
         return true;
+    }
+
+    public static int highlightPersistent(Collection<BlockPos> positions) {
+        long now = System.currentTimeMillis();
+        int count = 0;
+        for (BlockPos pos : positions) {
+            highlights.removeIf(h -> h.pos().equals(pos));
+            highlights.add(new HighlightPos(pos, now, true));
+            count++;
+        }
+        return count;
+    }
+
+    public static void removeContainer(Level level, BlockPos pos) {
+        removeAt(Util.getCanonicalPos(level, pos));
+        for (BlockPos half : Util.resolveContainerPositions(level, pos)) {
+            removeAt(half);
+        }
+    }
+
+    public static void removeAt(BlockPos pos) {
+        highlights.removeIf(h -> h.pos().equals(pos));
+    }
+
+    public static void clearAll() {
+        highlights.clear();
     }
 
     public static void removeExpired() {
         long now = System.currentTimeMillis();
-        highlights.removeIf(h -> HighlightEffect.isExpired(now - h.startTimeMillis()));
+        highlights.removeIf(h -> !h.persistent() && HighlightEffect.isExpired(now - h.startTimeMillis()));
     }
 
     public static List<HighlightPos> getActiveHighlights() {
         long now = System.currentTimeMillis();
         List<HighlightPos> active = new ArrayList<>();
         for (HighlightPos h : highlights) {
-            if (!HighlightEffect.isExpired(now - h.startTimeMillis())) {
+            if (h.persistent() || !HighlightEffect.isExpired(now - h.startTimeMillis())) {
                 active.add(h);
             }
         }
         return active;
+    }
+
+    private static boolean isPersistent(BlockPos pos) {
+        for (HighlightPos h : highlights) {
+            if (h.persistent() && h.pos().equals(pos)) return true;
+        }
+        return false;
     }
 
     private static void notifyWrongDimension(@NotNull Player player) {
