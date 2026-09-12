@@ -51,12 +51,12 @@ public class SearchScreen extends BaseOwoScreen<FlowLayout> {
 
         if (world != null) {
             currentDim = Util.getDimensionName(world);
-            strategies.add(new DimensionFilter("Current", currentDim));
+            strategies.add(new DimensionFilter(Component.translatable("gui.stashlight.label.dimensionCurrent"), currentDim));
         }
 
-        strategies.add(new DimensionFilter("All", null));
+        strategies.add(new DimensionFilter(Component.translatable("gui.stashlight.label.dimensionAll"), null));
 
-        repository.getDimensions().forEach(dim -> strategies.add(new DimensionFilter(dim, dim)));
+        repository.getDimensions().forEach(dim -> strategies.add(new DimensionFilter(Util.dimensionDisplayName(dim), dim)));
 
         filterManager.setCyclingStrategies(strategies);
         filterManager.addAlwaysOn(new SmallContainerFilter());

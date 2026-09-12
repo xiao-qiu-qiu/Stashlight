@@ -2,6 +2,7 @@ package dev.strangequark.stashlight.util;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.CompoundContainer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
@@ -14,6 +15,10 @@ import java.util.Set;
 public class Util {
     public static String getDimensionName(Level level) {
         return level.dimension().identifier().getPath();
+    }
+
+    public static Component dimensionDisplayName(String dimensionPath) {
+        return Component.translatableWithFallback("gui.stashlight.dimension." + dimensionPath, dimensionPath);
     }
 
     public static boolean isValidSearchableContainer(BlockState state) {

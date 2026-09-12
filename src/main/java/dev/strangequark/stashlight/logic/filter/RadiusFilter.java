@@ -11,10 +11,8 @@ public final class RadiusFilter implements FilterStrategy {
     private static final int DEFAULT_INDEX = 2;
 
     @Override
-    public String getLabel() {
-        int index = Config.get().searchRadiusIndex();
-        int val = RADIUS_VALUES[index];
-        return val == -1 ? "All" : val + " (Chunks)";
+    public Component getLabel() {
+        return getLabelForIndex(Config.get().searchRadiusIndex());
     }
 
     @Override

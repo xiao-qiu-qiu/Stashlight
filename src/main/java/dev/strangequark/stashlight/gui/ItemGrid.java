@@ -3,6 +3,7 @@ package dev.strangequark.stashlight.gui;
 import dev.strangequark.stashlight.config.Config;
 import dev.strangequark.stashlight.model.IndexedItem;
 import dev.strangequark.stashlight.render.HighlightManager;
+import dev.strangequark.stashlight.util.Util;
 import io.wispforest.owo.ui.base.BaseUIComponent;
 import io.wispforest.owo.ui.core.OwoUIGraphics;
 import io.wispforest.owo.ui.core.PositionedRectangle;
@@ -140,7 +141,7 @@ public class ItemGrid extends BaseUIComponent {
                 .append(Component.literal(posStr).withStyle(ChatFormatting.AQUA))
                 .append(Component.translatable("gui.stashlight.label.blocksAway", formattedDist).withStyle(ChatFormatting.GRAY)));
         lines.add(Component.translatable("gui.stashlight.label.dimension").withStyle(ChatFormatting.GRAY).append(": ")
-                .append(Component.literal(item.dimension()).withStyle(ChatFormatting.GREEN)));
+                .append(Util.dimensionDisplayName(item.dimension()).copy().withStyle(ChatFormatting.GREEN)));
 
         graphics.setTooltipForNextFrame(
                 mc.font, lines,
