@@ -20,16 +20,18 @@ public final class HighlightRenderer {
         List<HighlightPos> active = HighlightManager.getActiveHighlights();
         if (active.isEmpty()) return;
 
-        VertexConsumer vc = context.bufferSource().getBuffer(HighlightRenderLayer.XRAY_LAYER);
         Camera camera = context.gameRenderer().getMainCamera();
         Vec3 cam = camera.position();
-
         PoseStack matrices = context.poseStack();
+
+        VertexConsumer lines = context.bufferSource().getBuffer(HighlightRenderLayer.XRAY_LINES_LAYER);
+        for (HighlightPos highlight : active) {
+            HighlightGeometry.drawTracer(matrices, lines, cam, highlight.pos());
+        }
+
+        VertexConsumer boxes = context.bufferSource().getBuffer(HighlightRenderLayer.XRAY_LAYER);
         for (HighlightPos highlight : active) {
             long elapsed = System.currentTimeMillis() - highlight.startTimeMillis();
-
-            HighlightGeometry.drawTracer(matrices, vc, camera, highlight.pos());
-
             if (!highlight.persistent() && !HighlightEffect.shouldRender(elapsed)) continue;
 
             matrices.pushPose();
@@ -38,7 +40,7 @@ public final class HighlightRenderer {
                     highlight.pos().getY() - cam.y,
                     highlight.pos().getZ() - cam.z
             );
-            HighlightGeometry.drawWireframeBox(matrices, vc, cam, highlight.pos());
+            HighlightGeometry.drawWireframeBox(matrices, boxes, cam, highlight.pos());
             matrices.popPose();
         }
     }
