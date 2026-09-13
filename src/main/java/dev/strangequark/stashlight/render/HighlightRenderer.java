@@ -6,7 +6,6 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.strangequark.stashlight.model.HighlightPos;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3fc;
 
@@ -21,7 +20,7 @@ public final class HighlightRenderer {
         List<HighlightPos> active = HighlightManager.getActiveHighlights();
         if (active.isEmpty()) return;
 
-        VertexConsumer vc = context.bufferSource().getBuffer(HighlightRenderLayer.XRAY_LAYER);
+        VertexConsumer lineVc = context.bufferSource().getBuffer(HighlightRenderLayer.LINE_LAYER);
         Camera camera = context.gameRenderer().getMainCamera();
         Vec3 cam = camera.position();
         PoseStack matrices = context.poseStack();
@@ -45,11 +44,11 @@ public final class HighlightRenderer {
             );
             HighlightGeometry.drawTracer(
                     matrices,
-                    vc,
+                    lineVc,
                     look.scale(0.2).subtract(blockOrigin),
                     new Vec3(0.5, 0.5, 0.5)
             );
-            HighlightGeometry.drawWireframeBox(matrices, vc, cam, highlight.pos());
+            HighlightGeometry.drawStorageBox(matrices, lineVc, highlight.pos());
             matrices.popPose();
         }
     }

@@ -26,8 +26,21 @@ public class HighlightRenderLayer {
                             .build()
             );
 
+    public static final RenderPipeline LINE_PIPELINE =
+            RenderPipelines.register(
+                    RenderPipeline.builder(RenderPipelines.LINES)
+                            .withLocation(Identifier.fromNamespaceAndPath(Stashlight.MOD_ID, "xray_lines"))
+                            .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.LINES)
+                            .withDepthStencilState(XRAY_DEPTH_STATE)
+                            .build()
+            );
+
     public static final RenderType XRAY_LAYER = RenderTypeInvoker.create(
             "chestfinder_xray",
             RenderSetup.builder(XRAY_PIPELINE).createRenderSetup()
+    );
+    public static final RenderType LINE_LAYER = RenderTypeInvoker.create(
+            "stashlight_xray_lines",
+            RenderSetup.builder(LINE_PIPELINE).createRenderSetup()
     );
 }

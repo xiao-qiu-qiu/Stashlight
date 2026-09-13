@@ -44,27 +44,35 @@ public final class HighlightGeometry {
         Vec3 axis = end.subtract(start);
         double length = axis.length();
         if (length < 0.01) return;
-        Vec3 direction = axis.scale(1.0 / length);
-        Vec3 reference = Math.abs(direction.y) < 0.9 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
-        Vec3 side = direction.cross(reference).normalize().scale(0.035);
-        Vec3 up = direction.cross(side).normalize().scale(0.035);
-        Vec3[] corners = {
-                start.add(side).add(up), start.subtract(side).add(up),
-                start.subtract(side).subtract(up), start.add(side).subtract(up),
-                end.add(side).add(up), end.subtract(side).add(up),
-                end.subtract(side).subtract(up), end.add(side).subtract(up)
-        };
-        int[][] faces = {{0, 1, 2, 3}, {4, 7, 6, 5}, {0, 4, 5, 1},
-                {1, 5, 6, 2}, {2, 6, 7, 3}, {3, 7, 4, 0}};
         Matrix4f mat = matrices.last().pose();
-        for (int[] face : faces) {
-            for (int index : face) {
-                Vec3 p = corners[index];
-                vc.addVertex(mat, (float) p.x, (float) p.y, (float) p.z)
-                        .setColor(1f, 0.82f, 0.3f, 1f)
-                        .setNormal(0f, 1f, 0f);
-            }
-        }
+        vertex(vc, mat, start, 1f, 0.82f, 0.3f, 1f);
+        vertex(vc, mat, end, 1f, 0.82f, 0.3f, 1f);
+    }
+
+    static void drawStorageBox(PoseStack matrices, VertexConsumer vc, BlockPos pos) {
+        Matrix4f mat = matrices.last().pose();
+        float min = 1f / 16f;
+        float max = 1f - min;
+        line(vc, mat, 0.5f, 0.0f, min, 0.5f, 1.0f - 2f * min, min);
+        line(vc, mat, min, 0.0f, 0.5f, max, 0.0f, 0.5f);
+        line(vc, mat, min, 1.0f - 2f * min, 0.5f, max, 1.0f - 2f * min, 0.5f);
+        line(vc, mat, min, 0.0f, min, max, 0.0f, min);
+        line(vc, mat, min, 1.0f - 2f * min, min, max, 1.0f - 2f * min, min);
+        line(vc, mat, min, 0.0f, max, max, 0.0f, max);
+        line(vc, mat, min, 1.0f - 2f * min, max, max, 1.0f - 2f * min, max);
+        line(vc, mat, min, 0.0f, min, min, 1.0f - 2f * min, min);
+        line(vc, mat, max, 0.0f, min, max, 1.0f - 2f * min, min);
+        line(vc, mat, min, 0.0f, max, min, 1.0f - 2f * min, max);
+        line(vc, mat, max, 0.0f, max, max, 1.0f - 2f * min, max);
+    }
+
+    private static void line(VertexConsumer vc, Matrix4f mat, float x1, float y1, float z1, float x2, float y2, float z2) {
+        vertex(vc, mat, new Vec3(x1, y1, z1), 1f, 1f, 1f, 1f);
+        vertex(vc, mat, new Vec3(x2, y2, z2), 1f, 1f, 1f, 1f);
+    }
+
+    private static void vertex(VertexConsumer vc, Matrix4f mat, Vec3 p, float r, float g, float b, float a) {
+        vc.addVertex(mat, (float) p.x, (float) p.y, (float) p.z).setColor(r, g, b, a);
     }
 
     private static void drawBox(PoseStack matrices, VertexConsumer vc,
