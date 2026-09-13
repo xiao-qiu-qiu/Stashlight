@@ -6,12 +6,14 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 public final class HighlightGeometry {
 
     private static final float THICKNESS = 0.02f;
     private static final float MAX_THICKNESS = 0.7f;
     private static final float R = 1f, G = 1f, B = 1f, A = 1f;
+    private static final float LINE_WIDTH = 2f;
 
 
     static void drawWireframeBox(PoseStack matrices, VertexConsumer vc, Vec3 cam, BlockPos pos) {
@@ -41,12 +43,7 @@ public final class HighlightGeometry {
     }
 
     static void drawTracer(PoseStack matrices, VertexConsumer vc, Vec3 start, Vec3 end) {
-        Vec3 axis = end.subtract(start);
-        double length = axis.length();
-        if (length < 0.01) return;
-        Matrix4f mat = matrices.last().pose();
-        vertex(vc, mat, start, 1f, 0.82f, 0.3f, 1f);
-        vertex(vc, mat, end, 1f, 0.82f, 0.3f, 1f);
+        line(vc, matrices.last().pose(), start, end, 1f, 0.82f, 0.3f);
     }
 
     static void drawStorageBox(PoseStack matrices, VertexConsumer vc, BlockPos pos) {
@@ -67,12 +64,25 @@ public final class HighlightGeometry {
     }
 
     private static void line(VertexConsumer vc, Matrix4f mat, float x1, float y1, float z1, float x2, float y2, float z2) {
-        vertex(vc, mat, new Vec3(x1, y1, z1), 1f, 1f, 1f, 1f);
-        vertex(vc, mat, new Vec3(x2, y2, z2), 1f, 1f, 1f, 1f);
+        line(vc, mat, new Vec3(x1, y1, z1), new Vec3(x2, y2, z2), 1f, 1f, 1f);
     }
 
-    private static void vertex(VertexConsumer vc, Matrix4f mat, Vec3 p, float r, float g, float b, float a) {
-        vc.addVertex(mat, (float) p.x, (float) p.y, (float) p.z).setColor(r, g, b, a);
+    private static void line(VertexConsumer vc, Matrix4f mat, Vec3 start, Vec3 end, float r, float g, float b) {
+        Vec3 axis = end.subtract(start);
+        if (axis.lengthSqr() < 0.0001) return;
+
+        // The shader expands each segment into a screen-space quad. Both endpoints
+        // need the same direction, transformed into the same space as their positions.
+        Vector3f normal = mat.transformDirection(new Vector3f((float) axis.x, (float) axis.y, (float) axis.z)).normalize();
+        lineVertex(vc, mat, start, normal, r, g, b);
+        lineVertex(vc, mat, end, normal, r, g, b);
+    }
+
+    private static void lineVertex(VertexConsumer vc, Matrix4f mat, Vec3 pos, Vector3f normal, float r, float g, float b) {
+        vc.addVertex(mat, (float) pos.x, (float) pos.y, (float) pos.z)
+                .setColor(r, g, b, 1f)
+                .setNormal(normal.x, normal.y, normal.z)
+                .setLineWidth(LINE_WIDTH);
     }
 
     private static void drawBox(PoseStack matrices, VertexConsumer vc,

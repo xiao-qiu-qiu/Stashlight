@@ -30,7 +30,8 @@ public class HighlightRenderLayer {
             RenderPipelines.register(
                     RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
                             .withLocation(Identifier.fromNamespaceAndPath(Stashlight.MOD_ID, "xray_lines"))
-                            .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.LINES)
+                            // Keep the normal and per-vertex line width required by the 26.1 line shader.
+                            .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH, VertexFormat.Mode.LINES)
                             .withDepthStencilState(XRAY_DEPTH_STATE)
                             .build()
             );
