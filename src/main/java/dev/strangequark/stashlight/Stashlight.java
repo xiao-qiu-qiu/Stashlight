@@ -11,7 +11,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.event.client.player.ClientPlayerBlockBreakEvents;
@@ -61,7 +60,6 @@ public class Stashlight implements ClientModInitializer {
         ClientPlayerBlockBreakEvents.AFTER.register(this::onBlockBreak);
         ScreenEvents.AFTER_INIT.register(this::onScreenInit);
         LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(HighlightRenderer::render);
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "tracers"), HighlightRenderer::extractHud);
 
         searchKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.stashlight.search_menu",

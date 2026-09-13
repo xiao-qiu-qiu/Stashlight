@@ -40,6 +40,33 @@ public final class HighlightGeometry {
         drawBox(matrices, vc, max - t, max - t, min + t, max, max, max - t);
     }
 
+    static void drawTracer(PoseStack matrices, VertexConsumer vc, Vec3 start, Vec3 end) {
+        Vec3 axis = end.subtract(start);
+        double length = axis.length();
+        if (length < 0.01) return;
+        Vec3 direction = axis.scale(1.0 / length);
+        Vec3 reference = Math.abs(direction.y) < 0.9 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
+        Vec3 side = direction.cross(reference).normalize().scale(0.035);
+        Vec3 up = direction.cross(side).normalize().scale(0.035);
+        Vec3[] corners = {
+                start.add(side).add(up), start.subtract(side).add(up),
+                start.subtract(side).subtract(up), start.add(side).subtract(up),
+                end.add(side).add(up), end.subtract(side).add(up),
+                end.subtract(side).subtract(up), end.add(side).subtract(up)
+        };
+        int[][] faces = {{0, 1, 2, 3}, {4, 7, 6, 5}, {0, 4, 5, 1},
+                {1, 5, 6, 2}, {2, 6, 7, 3}, {3, 7, 4, 0}};
+        Matrix4f mat = matrices.last().pose();
+        for (int[] face : faces) {
+            for (int index : face) {
+                Vec3 p = corners[index];
+                vc.addVertex(mat, (float) p.x, (float) p.y, (float) p.z)
+                        .setColor(1f, 0.82f, 0.3f, 1f)
+                        .setNormal(0f, 1f, 0f);
+            }
+        }
+    }
+
     private static void drawBox(PoseStack matrices, VertexConsumer vc,
                                 float x1, float y1, float z1,
                                 float x2, float y2, float z2) {
