@@ -28,7 +28,7 @@ public class HighlightRenderLayer {
 
     public static final RenderPipeline LINE_PIPELINE =
             RenderPipelines.register(
-                    RenderPipeline.builder(RenderPipelines.LINES)
+                    RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
                             .withLocation(Identifier.fromNamespaceAndPath(Stashlight.MOD_ID, "xray_lines"))
                             .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.LINES)
                             .withDepthStencilState(XRAY_DEPTH_STATE)
