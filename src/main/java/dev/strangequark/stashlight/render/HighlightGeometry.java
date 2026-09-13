@@ -3,145 +3,124 @@ package dev.strangequark.stashlight.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.Direction;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
+/**
+ * Storage-ESP style geometry, ported from Meteor Client's Renderer3D box/line helpers.
+ */
 public final class HighlightGeometry {
 
-    private static final float THICKNESS = 0.02f;
-    private static final float MAX_THICKNESS = 0.7f;
-    private static final float R = 1f, G = 1f, B = 1f, A = 1f;
-    private static final float LINE_WIDTH = 2f;
+    static final float LINE_R = 1f, LINE_G = 160f / 255f, LINE_B = 0f, LINE_A = 1f;
+    static final float SIDE_R = LINE_R, SIDE_G = LINE_G, SIDE_B = LINE_B, SIDE_A = 50f / 255f;
 
+    private static final int UP = 1 << 1;
+    private static final int DOWN = 1 << 2;
+    private static final int NORTH = 1 << 3;
+    private static final int SOUTH = 1 << 4;
+    private static final int WEST = 1 << 5;
+    private static final int EAST = 1 << 6;
 
-    static void drawWireframeBox(PoseStack matrices, VertexConsumer vc, Vec3 cam, BlockPos pos) {
-        double dist = pos.distToCenterSqr(cam.x, cam.y, cam.z);
-        float t = (float) Math.min(THICKNESS + Math.sqrt(dist) * 0.002, MAX_THICKNESS);
-
-        float min = -t;
-        float max = 1f + t;
-
-        // Vertical pillars
-        drawBox(matrices, vc, min, min, min, min + t, max, min + t);
-        drawBox(matrices, vc, max - t, min, min, max, max, min + t);
-        drawBox(matrices, vc, min, min, max - t, min + t, max, max);
-        drawBox(matrices, vc, max - t, min, max - t, max, max, max);
-
-        // Bottom edges
-        drawBox(matrices, vc, min + t, min, min, max - t, min + t, min + t);
-        drawBox(matrices, vc, min + t, min, max - t, max - t, min + t, max);
-        drawBox(matrices, vc, min, min, min + t, min + t, min + t, max - t);
-        drawBox(matrices, vc, max - t, min, min + t, max, min + t, max - t);
-
-        // Top edges
-        drawBox(matrices, vc, min + t, max - t, min, max - t, max, min + t);
-        drawBox(matrices, vc, min + t, max - t, max - t, max - t, max, max);
-        drawBox(matrices, vc, min, max - t, min + t, min + t, max, max - t);
-        drawBox(matrices, vc, max - t, max - t, min + t, max, max, max - t);
+    private HighlightGeometry() {
     }
 
-    static void drawTracer(PoseStack matrices, VertexConsumer vc, Vec3 start, Vec3 end) {
-        line(vc, matrices.last().pose(), start, end, 1f, 0.82f, 0.3f);
+    static int dirBit(Direction dir) {
+        return switch (dir) {
+            case UP -> UP;
+            case DOWN -> DOWN;
+            case NORTH -> NORTH;
+            case SOUTH -> SOUTH;
+            case WEST -> WEST;
+            case EAST -> EAST;
+        };
     }
 
-    static void drawStorageBox(PoseStack matrices, VertexConsumer vc, BlockPos pos) {
+    static boolean isNot(int excludeDir, int face) {
+        return (excludeDir & face) != face;
+    }
+
+    static void line(VertexConsumer vc, Matrix4f mat,
+                     float x1, float y1, float z1,
+                     float x2, float y2, float z2,
+                     float r, float g, float b, float a) {
+        vc.addVertex(mat, x1, y1, z1).setColor(r, g, b, a);
+        vc.addVertex(mat, x2, y2, z2).setColor(r, g, b, a);
+    }
+
+    static void boxLines(PoseStack matrices, VertexConsumer vc,
+                         float x1, float y1, float z1,
+                         float x2, float y2, float z2,
+                         int excludeDir) {
         Matrix4f mat = matrices.last().pose();
-        float min = 1f / 16f;
-        float max = 1f - min;
-        line(vc, mat, 0.5f, 0.0f, min, 0.5f, 1.0f - 2f * min, min);
-        line(vc, mat, min, 0.0f, 0.5f, max, 0.0f, 0.5f);
-        line(vc, mat, min, 1.0f - 2f * min, 0.5f, max, 1.0f - 2f * min, 0.5f);
-        line(vc, mat, min, 0.0f, min, max, 0.0f, min);
-        line(vc, mat, min, 1.0f - 2f * min, min, max, 1.0f - 2f * min, min);
-        line(vc, mat, min, 0.0f, max, max, 0.0f, max);
-        line(vc, mat, min, 1.0f - 2f * min, max, max, 1.0f - 2f * min, max);
-        line(vc, mat, min, 0.0f, min, min, 1.0f - 2f * min, min);
-        line(vc, mat, max, 0.0f, min, max, 1.0f - 2f * min, min);
-        line(vc, mat, min, 0.0f, max, min, 1.0f - 2f * min, max);
-        line(vc, mat, max, 0.0f, max, max, 1.0f - 2f * min, max);
+        float r = LINE_R, g = LINE_G, b = LINE_B, a = LINE_A;
+
+        if (excludeDir == 0) {
+            line(vc, mat, x1, y1, z1, x1, y2, z1, r, g, b, a);
+            line(vc, mat, x1, y1, z2, x1, y2, z2, r, g, b, a);
+            line(vc, mat, x2, y1, z1, x2, y2, z1, r, g, b, a);
+            line(vc, mat, x2, y1, z2, x2, y2, z2, r, g, b, a);
+
+            line(vc, mat, x1, y1, z1, x1, y1, z2, r, g, b, a);
+            line(vc, mat, x2, y1, z1, x2, y1, z2, r, g, b, a);
+            line(vc, mat, x1, y1, z1, x2, y1, z1, r, g, b, a);
+            line(vc, mat, x1, y1, z2, x2, y1, z2, r, g, b, a);
+
+            line(vc, mat, x1, y2, z1, x1, y2, z2, r, g, b, a);
+            line(vc, mat, x2, y2, z1, x2, y2, z2, r, g, b, a);
+            line(vc, mat, x1, y2, z1, x2, y2, z1, r, g, b, a);
+            line(vc, mat, x1, y2, z2, x2, y2, z2, r, g, b, a);
+            return;
+        }
+
+        if (isNot(excludeDir, WEST) && isNot(excludeDir, NORTH)) line(vc, mat, x1, y1, z1, x1, y2, z1, r, g, b, a);
+        if (isNot(excludeDir, WEST) && isNot(excludeDir, SOUTH)) line(vc, mat, x1, y1, z2, x1, y2, z2, r, g, b, a);
+        if (isNot(excludeDir, EAST) && isNot(excludeDir, NORTH)) line(vc, mat, x2, y1, z1, x2, y2, z1, r, g, b, a);
+        if (isNot(excludeDir, EAST) && isNot(excludeDir, SOUTH)) line(vc, mat, x2, y1, z2, x2, y2, z2, r, g, b, a);
+
+        if (isNot(excludeDir, WEST) && isNot(excludeDir, DOWN)) line(vc, mat, x1, y1, z1, x1, y1, z2, r, g, b, a);
+        if (isNot(excludeDir, EAST) && isNot(excludeDir, DOWN)) line(vc, mat, x2, y1, z1, x2, y1, z2, r, g, b, a);
+        if (isNot(excludeDir, NORTH) && isNot(excludeDir, DOWN)) line(vc, mat, x1, y1, z1, x2, y1, z1, r, g, b, a);
+        if (isNot(excludeDir, SOUTH) && isNot(excludeDir, DOWN)) line(vc, mat, x1, y1, z2, x2, y1, z2, r, g, b, a);
+
+        if (isNot(excludeDir, WEST) && isNot(excludeDir, UP)) line(vc, mat, x1, y2, z1, x1, y2, z2, r, g, b, a);
+        if (isNot(excludeDir, EAST) && isNot(excludeDir, UP)) line(vc, mat, x2, y2, z1, x2, y2, z2, r, g, b, a);
+        if (isNot(excludeDir, NORTH) && isNot(excludeDir, UP)) line(vc, mat, x1, y2, z1, x2, y2, z1, r, g, b, a);
+        if (isNot(excludeDir, SOUTH) && isNot(excludeDir, UP)) line(vc, mat, x1, y2, z2, x2, y2, z2, r, g, b, a);
     }
 
-    static void drawAabb(PoseStack matrices, VertexConsumer vc, double minX, double minY, double minZ,
-                         double maxX, double maxY, double maxZ) {
-        float x1 = (float) minX, y1 = (float) minY, z1 = (float) minZ;
-        float x2 = (float) maxX, y2 = (float) maxY, z2 = (float) maxZ;
-        line(vc, matrices.last().pose(), new Vec3(x1, y1, z1), new Vec3(x2, y1, z1), 1f, 1f, 1f);
-        line(vc, matrices.last().pose(), new Vec3(x1, y2, z1), new Vec3(x2, y2, z1), 1f, 1f, 1f);
-        line(vc, matrices.last().pose(), new Vec3(x1, y1, z2), new Vec3(x2, y1, z2), 1f, 1f, 1f);
-        line(vc, matrices.last().pose(), new Vec3(x1, y2, z2), new Vec3(x2, y2, z2), 1f, 1f, 1f);
-        line(vc, matrices.last().pose(), new Vec3(x1, y1, z1), new Vec3(x1, y2, z1), 1f, 1f, 1f);
-        line(vc, matrices.last().pose(), new Vec3(x2, y1, z1), new Vec3(x2, y2, z1), 1f, 1f, 1f);
-        line(vc, matrices.last().pose(), new Vec3(x1, y1, z2), new Vec3(x1, y2, z2), 1f, 1f, 1f);
-        line(vc, matrices.last().pose(), new Vec3(x2, y1, z2), new Vec3(x2, y2, z2), 1f, 1f, 1f);
-    }
-
-    private static void line(VertexConsumer vc, Matrix4f mat, float x1, float y1, float z1, float x2, float y2, float z2) {
-        line(vc, mat, new Vec3(x1, y1, z1), new Vec3(x2, y2, z2), 1f, 1f, 1f);
-    }
-
-    private static void line(VertexConsumer vc, Matrix4f mat, Vec3 start, Vec3 end, float r, float g, float b) {
-        Vec3 axis = end.subtract(start);
-        if (axis.lengthSqr() < 0.0001) return;
-
-        // The shader expands each segment into a screen-space quad. Both endpoints
-        // need the same direction, transformed into the same space as their positions.
-        Vector3f normal = mat.transformDirection(new Vector3f((float) axis.x, (float) axis.y, (float) axis.z)).normalize();
-        lineVertex(vc, mat, start, normal, r, g, b);
-        lineVertex(vc, mat, end, normal, r, g, b);
-    }
-
-    private static void lineVertex(VertexConsumer vc, Matrix4f mat, Vec3 pos, Vector3f normal, float r, float g, float b) {
-        vc.addVertex(mat, (float) pos.x, (float) pos.y, (float) pos.z)
-                .setColor(r, g, b, 1f)
-                .setNormal(normal.x, normal.y, normal.z)
-                .setLineWidth(LINE_WIDTH);
-    }
-
-    private static void drawBox(PoseStack matrices, VertexConsumer vc,
-                                float x1, float y1, float z1,
-                                float x2, float y2, float z2) {
+    static void boxSides(PoseStack matrices, VertexConsumer vc,
+                         float x1, float y1, float z1,
+                         float x2, float y2, float z2,
+                         int excludeDir) {
         Matrix4f mat = matrices.last().pose();
-
-        // Top
-        vertex(vc, mat, x1, y2, z1);
-        vertex(vc, mat, x1, y2, z2);
-        vertex(vc, mat, x2, y2, z2);
-        vertex(vc, mat, x2, y2, z1);
-
-        // Bottom
-        vertex(vc, mat, x1, y1, z2);
-        vertex(vc, mat, x1, y1, z1);
-        vertex(vc, mat, x2, y1, z1);
-        vertex(vc, mat, x2, y1, z2);
-
-        // Front
-        vertex(vc, mat, x1, y1, z1);
-        vertex(vc, mat, x1, y2, z1);
-        vertex(vc, mat, x2, y2, z1);
-        vertex(vc, mat, x2, y1, z1);
-
-        // Back
-        vertex(vc, mat, x2, y1, z2);
-        vertex(vc, mat, x2, y2, z2);
-        vertex(vc, mat, x1, y2, z2);
-        vertex(vc, mat, x1, y1, z2);
-
-        // Left
-        vertex(vc, mat, x1, y1, z2);
-        vertex(vc, mat, x1, y2, z2);
-        vertex(vc, mat, x1, y2, z1);
-        vertex(vc, mat, x1, y1, z1);
-
-        // Right
-        vertex(vc, mat, x2, y1, z1);
-        vertex(vc, mat, x2, y2, z1);
-        vertex(vc, mat, x2, y2, z2);
-        vertex(vc, mat, x2, y1, z2);
+        if (excludeDir == 0 || isNot(excludeDir, WEST)) {
+            quad(vc, mat, x1, y1, z1, x1, y1, z2, x1, y2, z2, x1, y2, z1);
+        }
+        if (excludeDir == 0 || isNot(excludeDir, EAST)) {
+            quad(vc, mat, x2, y1, z1, x2, y2, z1, x2, y2, z2, x2, y1, z2);
+        }
+        if (excludeDir == 0 || isNot(excludeDir, NORTH)) {
+            quad(vc, mat, x1, y1, z1, x1, y2, z1, x2, y2, z1, x2, y1, z1);
+        }
+        if (excludeDir == 0 || isNot(excludeDir, SOUTH)) {
+            quad(vc, mat, x1, y1, z2, x2, y1, z2, x2, y2, z2, x1, y2, z2);
+        }
+        if (excludeDir == 0 || isNot(excludeDir, DOWN)) {
+            quad(vc, mat, x1, y1, z1, x2, y1, z1, x2, y1, z2, x1, y1, z2);
+        }
+        if (excludeDir == 0 || isNot(excludeDir, UP)) {
+            quad(vc, mat, x1, y2, z1, x1, y2, z2, x2, y2, z2, x2, y2, z1);
+        }
     }
 
-    private static void vertex(VertexConsumer vc, Matrix4f mat, float x, float y, float z) {
-        vc.addVertex(mat, x, y, z).setColor(R, G, B, A).setNormal(0f, 1f, 0f);
+    private static void quad(VertexConsumer vc, Matrix4f mat,
+                             float x1, float y1, float z1,
+                             float x2, float y2, float z2,
+                             float x3, float y3, float z3,
+                             float x4, float y4, float z4) {
+        vc.addVertex(mat, x1, y1, z1).setColor(SIDE_R, SIDE_G, SIDE_B, SIDE_A);
+        vc.addVertex(mat, x2, y2, z2).setColor(SIDE_R, SIDE_G, SIDE_B, SIDE_A);
+        vc.addVertex(mat, x3, y3, z3).setColor(SIDE_R, SIDE_G, SIDE_B, SIDE_A);
+        vc.addVertex(mat, x4, y4, z4).setColor(SIDE_R, SIDE_G, SIDE_B, SIDE_A);
     }
 }
