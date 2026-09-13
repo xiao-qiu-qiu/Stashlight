@@ -63,6 +63,20 @@ public final class HighlightGeometry {
         line(vc, mat, max, 0.0f, max, max, 1.0f - 2f * min, max);
     }
 
+    static void drawAabb(PoseStack matrices, VertexConsumer vc, double minX, double minY, double minZ,
+                         double maxX, double maxY, double maxZ) {
+        float x1 = (float) minX, y1 = (float) minY, z1 = (float) minZ;
+        float x2 = (float) maxX, y2 = (float) maxY, z2 = (float) maxZ;
+        line(vc, matrices.last().pose(), new Vec3(x1, y1, z1), new Vec3(x2, y1, z1), 1f, 1f, 1f);
+        line(vc, matrices.last().pose(), new Vec3(x1, y2, z1), new Vec3(x2, y2, z1), 1f, 1f, 1f);
+        line(vc, matrices.last().pose(), new Vec3(x1, y1, z2), new Vec3(x2, y1, z2), 1f, 1f, 1f);
+        line(vc, matrices.last().pose(), new Vec3(x1, y2, z2), new Vec3(x2, y2, z2), 1f, 1f, 1f);
+        line(vc, matrices.last().pose(), new Vec3(x1, y1, z1), new Vec3(x1, y2, z1), 1f, 1f, 1f);
+        line(vc, matrices.last().pose(), new Vec3(x2, y1, z1), new Vec3(x2, y2, z1), 1f, 1f, 1f);
+        line(vc, matrices.last().pose(), new Vec3(x1, y1, z2), new Vec3(x1, y2, z2), 1f, 1f, 1f);
+        line(vc, matrices.last().pose(), new Vec3(x2, y1, z2), new Vec3(x2, y2, z2), 1f, 1f, 1f);
+    }
+
     private static void line(VertexConsumer vc, Matrix4f mat, float x1, float y1, float z1, float x2, float y2, float z2) {
         line(vc, mat, new Vec3(x1, y1, z1), new Vec3(x2, y2, z2), 1f, 1f, 1f);
     }
