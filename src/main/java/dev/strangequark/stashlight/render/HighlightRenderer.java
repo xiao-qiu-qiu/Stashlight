@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3fc;
 
 import java.util.List;
 
@@ -35,7 +36,8 @@ public final class HighlightRenderer {
                     highlight.pos().getY() - cam.y,
                     highlight.pos().getZ() - cam.z
             );
-            Vec3 look = camera.getLookVector();
+            Vector3fc fwd = camera.forwardVector();
+            Vec3 look = new Vec3(fwd.x(), fwd.y(), fwd.z());
             Vec3 blockOrigin = new Vec3(
                     highlight.pos().getX() - cam.x,
                     highlight.pos().getY() - cam.y,
