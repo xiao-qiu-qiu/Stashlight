@@ -30,7 +30,6 @@ public class ItemGrid extends BaseUIComponent {
     private int slotsPerRow = 1;
 
     // Hovered slot index (-1 = none)
-    private int hoveredIndex = -1;
 
     public ItemGrid() {
         this.horizontalSizing(Sizing.content());
@@ -40,7 +39,6 @@ public class ItemGrid extends BaseUIComponent {
     public void setItems(List<IndexedItem> newItems, int newSlotsPerRow) {
         this.items = newItems;
         this.slotsPerRow = Math.max(1, newSlotsPerRow);
-        this.hoveredIndex = -1;
         this.notifyParentIfMounted();
     }
 
@@ -64,7 +62,7 @@ public class ItemGrid extends BaseUIComponent {
         var font = mc.font;
 
         // Recompute hovered slot from raw mouse coords (O(1) math, no iteration)
-        hoveredIndex = slotIndexAt(mouseX, mouseY);
+        int hoveredIndex = slotIndexAt(mouseX, mouseY);
 
         int n = items.size();
         for (int i = 0; i < n; i++) {

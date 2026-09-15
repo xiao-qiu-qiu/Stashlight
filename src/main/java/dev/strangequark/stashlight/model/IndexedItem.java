@@ -3,6 +3,8 @@ package dev.strangequark.stashlight.model;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.Locale;
+
 /**
  * A 'ready-to-search' entry. We pre-calculate the sums and
  * attach the metadata so the UI doesn't have to do any math.
@@ -24,7 +26,7 @@ public record IndexedItem(
                 containerName,
                 containerCapacity,
                 timestamp,
-                stack.getHoverName().getString().toLowerCase()
+                stack.getHoverName().getString().toLowerCase(Locale.ROOT)
         );
     }
 }

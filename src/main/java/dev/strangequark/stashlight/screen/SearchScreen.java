@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -242,6 +243,8 @@ public class SearchScreen extends BaseOwoScreen<FlowLayout> {
     }
 
     private void refreshGrid(String query) {
+        // An immediate filter/sort change consumes the pending debounced query.
+        pendingQuery = null;
         int windowWidth = (int) (this.width * (SCREEN_FILL_PERCENT / 100.0));
         // Subtract mainWindow padding (×2), scrollbar width, and gap (reserved for ItemGrid's internal padding)
         int availableVars = (PADDING * 2) + SCROLL_WIDTH + GAP + (BORDER * 2);
@@ -255,7 +258,7 @@ public class SearchScreen extends BaseOwoScreen<FlowLayout> {
             this.mainWindow.horizontalSizing(Sizing.fixed(snappedWidth));
         }
 
-        final String lowerQuery = query.toLowerCase();
+        final String lowerQuery = query.toLowerCase(Locale.ROOT);
 
         List<IndexedItem> sortedItems = repository.getSearchIndex().stream()
                 .filter(item -> matchesDeep(item, lowerQuery) && filterManager.matches(item))
@@ -318,7 +321,7 @@ public class SearchScreen extends BaseOwoScreen<FlowLayout> {
         return bundle != null && bundle.itemCopyStream().anyMatch(inner -> stackMatchesInventory(inner, inventoryKeys));
     }
 
-    public static boolean matchesDeep(IndexedItem item, String lowerQuery) {
+    private static boolean matchesDeep(IndexedItem item, String lowerQuery) {
         if (lowerQuery.isEmpty()) return true;
 
         // 1. Check main item name (searchKey is already lowercase)
@@ -329,7 +332,7 @@ public class SearchScreen extends BaseOwoScreen<FlowLayout> {
         if (container != null) {
             boolean found = container
                     .nonEmptyItemCopyStream()
-                    .anyMatch(inner -> inner.getHoverName().getString().toLowerCase().contains(lowerQuery));
+                    .anyMatch(inner -> inner.getHoverName().getString().toLowerCase(Locale.ROOT).contains(lowerQuery));
 
             if (found) {
                 return true;
@@ -341,7 +344,7 @@ public class SearchScreen extends BaseOwoScreen<FlowLayout> {
         if (bundle != null) {
             boolean found = bundle
                     .itemCopyStream()
-                    .anyMatch(inner -> inner.getHoverName().getString().toLowerCase().contains(lowerQuery));
+                    .anyMatch(inner -> inner.getHoverName().getString().toLowerCase(Locale.ROOT).contains(lowerQuery));
 
             if (found) {
                 return true;
@@ -355,7 +358,6 @@ public class SearchScreen extends BaseOwoScreen<FlowLayout> {
     public void extractRenderState(net.minecraft.client.gui.GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         if (pendingQuery != null && System.currentTimeMillis() - lastQueryChangeTime >= DEBOUNCE_MS) {
             refreshGrid(pendingQuery);
-            pendingQuery = null;
         }
         super.extractRenderState(context, mouseX, mouseY, delta);
     }

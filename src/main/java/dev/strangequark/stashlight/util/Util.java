@@ -12,7 +12,9 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 
 import java.util.Set;
 
-public class Util {
+public final class Util {
+    private Util() {
+    }
     public static String getDimensionName(Level level) {
         return level.dimension().identifier().getPath();
     }

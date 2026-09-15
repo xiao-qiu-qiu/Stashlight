@@ -7,9 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 
 import java.util.Comparator;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class DistanceSort implements SortStrategy {
     @Override
@@ -34,11 +32,6 @@ public class DistanceSort implements SortStrategy {
 
         BlockPos playerPos = player.getOnPos();
 
-        Map<IndexedItem, Double> distCache = new IdentityHashMap<>(items.size());
-        for (IndexedItem item : items) {
-            distCache.put(item, item.pos().distSqr(playerPos));
-        }
-
-        items.sort(Comparator.comparingDouble(distCache::get));
+        items.sort(Comparator.comparingDouble(item -> item.pos().distSqr(playerPos)));
     }
 }
