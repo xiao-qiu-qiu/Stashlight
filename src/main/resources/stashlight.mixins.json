@@ -10,5 +10,5 @@
   "overwrites": {
     "requireAnnotations": true
   },
-  "client": ["RenderTypeInvoker"]
+  "client": ["RenderTypeInvoker", "ContainerScreenAccessor"]
 }

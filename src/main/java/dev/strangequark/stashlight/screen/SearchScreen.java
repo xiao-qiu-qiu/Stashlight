@@ -1,5 +1,6 @@
 package dev.strangequark.stashlight.screen;
 
+import dev.strangequark.stashlight.compat.MaterialSelection;
 import dev.strangequark.stashlight.config.Config;
 import dev.strangequark.stashlight.gui.ItemGrid;
 import dev.strangequark.stashlight.logic.filter.*;
@@ -227,7 +228,13 @@ public class SearchScreen extends BaseOwoScreen<FlowLayout> {
                 .sizing(Sizing.content(), Sizing.fixed(COMPONENT_HEIGHT));
 
         actionsRow.child(highlightInvBtn).child(clearHighlightsBtn);
-        footer.child(optionsRow).child(actionsRow);
+        ButtonComponent highlightMaterialsBtn = (ButtonComponent) UIComponents
+                .button(Component.translatable("screen.stashlight.highlightMaterials"),
+                        b -> MaterialSelection.highlightContainers(repository))
+                .tooltip(Component.translatable("screen.stashlight.highlightMaterials.tooltip"))
+                .sizing(Sizing.content(), Sizing.fixed(COMPONENT_HEIGHT));
+
+        footer.child(optionsRow).child(actionsRow).child(highlightMaterialsBtn);
 
         // --- ASSEMBLE ---
         mainWindow.child(title).child(searchBar).child(gridWrapper).child(footer);

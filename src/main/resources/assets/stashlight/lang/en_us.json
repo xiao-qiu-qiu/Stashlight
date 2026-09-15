@@ -27,5 +27,12 @@
   "screen.stashlight.highlightInventory": "Highlight inventory",
   "screen.stashlight.highlightInventory.tooltip": "Highlight every container that holds an item from your inventory",
   "screen.stashlight.clearHighlights": "Clear all rendering",
-  "screen.stashlight.clearHighlights.tooltip": "Remove all highlights and tracer lines"
+  "screen.stashlight.clearHighlights.tooltip": "Remove all highlights, tracer lines and material slot highlights",
+  "screen.stashlight.highlightMaterials": "Highlight schematic materials",
+  "screen.stashlight.highlightMaterials.tooltip": "Use the last opened Litematica material list (including its filters), or the active material HUD. Replace markers with all matching cached containers in this dimension; highlight matching slots when opened. Ignores Stashlight search filters.",
+  "render.stashlight.materials.notInstalled": "Install Litematica to use schematic material highlighting",
+  "render.stashlight.materials.noList": "Open a Litematica material list or enable its material HUD first",
+  "render.stashlight.materials.empty": "The selected material list is empty after filtering",
+  "render.stashlight.materials.incompatible": "Reading this Litematica material list failed; see the game log for details",
+  "render.stashlight.materials.marked": "Selected %s material types; highlighted %s cached containers. Matching container slots are now highlighted."
 }

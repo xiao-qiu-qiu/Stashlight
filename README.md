@@ -35,6 +35,32 @@
 
 Press **NUMPAD 5** to open the search menu (keybind can be changed in Minecraft's controls settings).
 
+### Litematica material gathering
+
+With Litematica installed, open its material list and set any search, ignored-item,
+or hide-available filters. Close that window, open Stashlight with **NUMPAD 5**, and
+click **Highlight schematic materials**. Stashlight captures the last material
+window's filtered entries, including rows outside the scroll viewport. If no
+material window has been opened during this connection, it reads the active
+material HUD's missing-material list instead (including entries beyond the HUD's
+display limit).
+
+The button replaces existing markers with every matching **cached container in
+the current dimension**, ignoring Stashlight's search text, radius and
+small-container filters. Open and close containers once to add them to the cache;
+unknown containers are not scanned. Matching uses item types, including materials
+inside shulker boxes and bundles.
+
+Opening a container removes its world marker and highlights matching storage slots
+in turquoise. A shulker box or bundle containing materials is highlighted as a
+whole slot. Slot highlights follow the live inventory as items move, and the
+selected material types stay active until **Clear all rendering**, another
+material selection, a dimension change, or disconnect. Reopen the Litematica
+material list and click the button again to capture updated requirements.
+
+Litematica is optional. If it is missing, no list is active, or its API is
+incompatible, the button displays a message without replacing existing markers.
+
 ![Stashlight Search Screen](https://cdn.modrinth.com/data/2ANiKmkM/images/8240485c0322a914f16022a7b936c62ecba33ba4_350.webp)
 
 ## Requirements

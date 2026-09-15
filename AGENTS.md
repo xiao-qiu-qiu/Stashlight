@@ -36,7 +36,7 @@ Commit message types used in this repo: `feat`, `fix`, `port`, `docs`, `chore`.
 | Item | Value |
 | --- | --- |
 | Minecraft | `26.1` (`minecraft_version` in `gradle.properties`) |
-| Mod version / jar | `26.1.2` → `build/libs/Stashlight-26.1.2.jar` |
+| Mod version / jar | `26.1.3` → `build/libs/Stashlight-26.1.3.jar` |
 | Loader | Fabric Loader `0.18.5` |
 | Fabric API | `0.144.3+26.1` |
 | owo-lib | `0.13.0+26.1` (Wisp Forest Maven + `owo-sentinel` bundled via `include`) |
@@ -51,7 +51,7 @@ Build:
 .\gradlew.bat build
 ```
 
-Runnable / installable jar: `build/libs/Stashlight-26.1.2.jar` (not `*-sources.jar`). Bump `mod_version` in `gradle.properties` when cutting a new jar.
+Runnable / installable jar: `build/libs/Stashlight-26.1.3.jar` (not `*-sources.jar`). Bump `mod_version` in `gradle.properties` when cutting a new jar.
 
 Dependencies: Fabric API and owo-lib are required at runtime. The mod is **client-only** (`environment: client`).
 

@@ -1,5 +1,6 @@
 package dev.strangequark.stashlight.render;
 
+import dev.strangequark.stashlight.compat.MaterialSelection;
 import dev.strangequark.stashlight.model.HighlightPos;
 import dev.strangequark.stashlight.model.IndexedItem;
 import dev.strangequark.stashlight.util.Util;
@@ -62,6 +63,7 @@ public final class HighlightManager {
 
     public static void clearAll() {
         highlights.clear();
+        MaterialSelection.clear();
     }
 
     public static void removeExpired() {

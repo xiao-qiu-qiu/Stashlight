@@ -1,8 +1,11 @@
 package dev.strangequark.stashlight;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.strangequark.stashlight.compat.LitematicaCompat;
+import dev.strangequark.stashlight.compat.MaterialSelection;
 import dev.strangequark.stashlight.render.HighlightManager;
 import dev.strangequark.stashlight.render.HighlightRenderer;
+import dev.strangequark.stashlight.render.MaterialSlotHighlight;
 import dev.strangequark.stashlight.repository.ContainerRepository;
 import dev.strangequark.stashlight.screen.SearchScreen;
 import dev.strangequark.stashlight.serializer.Serializer;
@@ -81,6 +84,7 @@ public class Stashlight implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            MaterialSelection.tick();
             if (client.level == null || repository == null) return;
 
             tickCounter++;
@@ -106,6 +110,8 @@ public class Stashlight implements ClientModInitializer {
 
             }
             HighlightManager.clearAll();
+            LitematicaCompat.clear();
+            lastOpened = null;
             serializer = null;
             repository = null;
         });
@@ -135,12 +141,16 @@ public class Stashlight implements ClientModInitializer {
 
 
     private void onScreenInit(Minecraft client, Screen screen, int w, int h) {
-        if (client.level == null || screen instanceof CreativeModeInventoryScreen) {
+        LitematicaCompat.observeScreen(screen);
+        if (client.level == null || client.player == null || screen instanceof CreativeModeInventoryScreen) {
             return;
         }
 
         if (screen instanceof AbstractContainerScreen<?> handled) {
             var handler = handled.getMenu();
+            if (handler != client.player.inventoryMenu) {
+                ScreenEvents.afterExtract(screen).register(MaterialSlotHighlight::extract);
+            }
             // Serialize on close to ensure the database reflects the final state of the inventory.
             ScreenEvents.remove(screen).register(closedScreen -> serializeContainer(client, handler));
         }

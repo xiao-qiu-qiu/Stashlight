@@ -27,5 +27,12 @@
   "screen.stashlight.highlightInventory": "高亮背包物品",
   "screen.stashlight.highlightInventory.tooltip": "高亮所有装有背包内物品的容器，并显示追踪线",
   "screen.stashlight.clearHighlights": "清除全部渲染",
-  "screen.stashlight.clearHighlights.tooltip": "清除所有高亮与追踪线"
+  "screen.stashlight.clearHighlights.tooltip": "清除所有高亮、追踪线及材料槽位高亮",
+  "screen.stashlight.highlightMaterials": "高亮投影材料",
+  "screen.stashlight.highlightMaterials.tooltip": "优先读取最近打开的 Litematica 材料列表（保留筛选），否则读取已启用的材料 HUD。替换标记，搜索当前维度全部已缓存容器，开箱后高亮匹配槽位；忽略 Stashlight 搜索筛选。",
+  "render.stashlight.materials.notInstalled": "安装 Litematica 后即可使用投影材料高亮",
+  "render.stashlight.materials.noList": "请先打开 Litematica 材料列表，或启用材料 HUD",
+  "render.stashlight.materials.empty": "所选材料列表筛选后为空",
+  "render.stashlight.materials.incompatible": "读取此版本 Litematica 材料列表失败，详情请查看游戏日志",
+  "render.stashlight.materials.marked": "已选取 %s 种材料，标记 %s 个已缓存容器；开箱后将高亮匹配槽位"
 }
