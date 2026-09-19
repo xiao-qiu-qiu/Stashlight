@@ -2,11 +2,11 @@ package dev.strangequark.stashlight.render;
 
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.strangequark.stashlight.model.HighlightPos;
 import dev.strangequark.stashlight.util.Util;
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
-import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 import org.joml.Vector4f;
 
 import java.util.List;
@@ -34,19 +35,23 @@ public final class HighlightRenderer {
     private HighlightRenderer() {
     }
 
-    public static void render(LevelRenderContext context) {
+    public static void render(Matrix4fc projection, Matrix4fc modelView) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null || client.player == null) return;
         HighlightManager.removeExpired();
         List<HighlightPos> active = HighlightManager.getActiveHighlights();
         if (active.isEmpty()) return;
 
-        Camera camera = context.gameRenderer().getMainCamera();
-        Vec3 cam = camera.position();
-        PoseStack matrices = context.poseStack();
-        Level level = Minecraft.getInstance().level;
+        Vec3 cam = client.gameRenderer.getGameRenderState().levelRenderState.cameraRenderState.pos;
+        PoseStack matrices = new PoseStack();
+        Level level = client.level;
 
-        Vec3 tracerStart = screenCenterOffset(camera);
+        // Use the actual matrices for this frame, including camera effects.
+        VIEW_PROJ.set(projection).mul(modelView);
+        Vec3 tracerStart = screenCenterOffset();
+        var transform = HighlightRenderLayer.beginFrame(VIEW_PROJ);
 
-        VertexConsumer lines = context.bufferSource().getBuffer(HighlightRenderLayer.LINE_LAYER);
+        BufferBuilder lines = HighlightRenderLayer.begin(VertexFormat.Mode.DEBUG_LINES);
         for (HighlightPos highlight : active) {
             Vec3 end = tracerEnd(level, highlight.pos(), cam);
             HighlightGeometry.line(
@@ -61,20 +66,22 @@ public final class HighlightRenderer {
             drawStorageBoxes(matrices, lines, null, level, cam, highlight.pos(), true, false);
         }
 
-        VertexConsumer quads = context.bufferSource().getBuffer(HighlightRenderLayer.XRAY_LAYER);
+        HighlightRenderLayer.draw(lines, HighlightRenderLayer.LINE_PIPELINE, transform);
+
+        BufferBuilder quads = HighlightRenderLayer.begin(VertexFormat.Mode.QUADS);
         for (HighlightPos highlight : active) {
             long elapsed = System.currentTimeMillis() - highlight.startTimeMillis();
             if (!highlight.persistent() && !HighlightEffect.shouldRender(elapsed)) continue;
             drawStorageBoxes(matrices, null, quads, level, cam, highlight.pos(), false, true);
         }
+        HighlightRenderLayer.draw(quads, HighlightRenderLayer.XRAY_PIPELINE, transform);
     }
 
     /**
      * Meteor RenderUtils.updateScreenCenter: invert P*V at NDC (0,0,0) to get the
      * world-space point behind the crosshair, then store it camera-relative.
      */
-    private static Vec3 screenCenterOffset(Camera camera) {
-        camera.getViewRotationProjectionMatrix(VIEW_PROJ);
+    private static Vec3 screenCenterOffset() {
         CENTER.set(0f, 0f, 0f, 1f);
         new Matrix4f(VIEW_PROJ).invert().transform(CENTER);
         if (CENTER.w() != 0f) CENTER.div(CENTER.w());

@@ -36,7 +36,7 @@ Commit message types used in this repo: `feat`, `fix`, `port`, `docs`, `chore`.
 | Item | Value |
 | --- | --- |
 | Minecraft | `26.1` (`minecraft_version` in `gradle.properties`) |
-| Mod version / jar | `26.1.3` → `build/libs/Stashlight-26.1.3.jar` |
+| Mod version / jar | `26.1.4` → `build/libs/Stashlight-26.1.4.jar` |
 | Loader | Fabric Loader `0.18.5` |
 | Fabric API | `0.144.3+26.1` |
 | owo-lib | `0.13.0+26.1` (Wisp Forest Maven + `owo-sentinel` bundled via `include`) |
@@ -51,7 +51,7 @@ Build:
 .\gradlew.bat build
 ```
 
-Runnable / installable jar: `build/libs/Stashlight-26.1.3.jar` (not `*-sources.jar`). Bump `mod_version` in `gradle.properties` when cutting a new jar.
+Runnable / installable jar: `build/libs/Stashlight-26.1.4.jar` (not `*-sources.jar`). Bump `mod_version` in `gradle.properties` when cutting a new jar.
 
 Dependencies: Fabric API and owo-lib are required at runtime. The mod is **client-only** (`environment: client`).
 
@@ -78,7 +78,7 @@ Root package: `dev.strangequark.stashlight`
 | `logic/filter/*` | Dimension cycle, radius (chunk Chebyshev), hide containers with `< 9` slots. |
 | `logic/sort/*` | Name / count / distance. `SortKey` enum order is the cycle order. |
 | `render/*` | X-ray wireframe highlight. 5 blink cycles, 750ms on / 250ms off. |
-| `mixin/RenderTypeInvoker.java` | Invoker for `RenderType.create` (custom x-ray layer). |
+| `mixin/GameRendererMixin.java` | Draws highlights after world/Iris compositing, before the hand projection. |
 | `util/Util.java` | Dimension path, searchable-block check, double-chest canonical pos (reflection on `CompoundContainer.container1`). |
 
 Data models: `ContainerSnapshot`, `IndexedItem` (precomputed lowercase `searchKey`), `StackKey` (same-item-same-components, ignores count), `HighlightPos`.
@@ -96,7 +96,7 @@ Lang files: `src/main/resources/assets/stashlight/lang/en_us.json`, `zh_cn.json`
 - **Saves are off-thread.** `NbtIo.writeCompressed` must not run on the render thread. `isSavePending` prevents overlapping saves. `shutdown()` on disconnect flushes then awaits the executor (5s).
 - **Cleanup every 100 ticks** (loaded chunks only): if the block is no longer a searchable container, drop it. Persist every 3000 ticks if dirty.
 - **Cache files:** singleplayer = world folder name; multiplayer = `MP_<ip>` with `:` / `/` replaced. Stored under `.minecraft/stashlight_cache/*.dat`.
-- **owo-ui + Mojang mappings + Java 25 + MC 26.1 render pipeline.** Highlight code uses `RenderPipeline` / `RenderType` invoker, not 1.21 Yarn `RenderLayer`. Match neighboring code; do not mix Yarn names.
+- **owo-ui + Mojang mappings + Java 25 + MC 26.1 render pipeline.** Highlights use a dedicated `RenderPipeline`, shader, and immediate pass to the main color target after world compositing. Keep them out of shared world buffers so Iris does not composite over them. Use the actual frame's projection/view matrices; do not mix Yarn names.
 
 ## Localization
 
