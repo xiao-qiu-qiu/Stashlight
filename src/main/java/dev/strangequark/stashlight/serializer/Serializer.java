@@ -45,12 +45,12 @@ public class Serializer {
 
             int containers = 0;
             for (String dim : root.keySet()) {
-                CompoundTag dimTag = root.getCompound(dim).orElse(null);
-                if (dimTag == null) continue;
+                CompoundTag dimTag = root.getCompound(dim).orElseThrow();
                 Map<BlockPos, ContainerSnapshot> posMap = new HashMap<>();
                 for (String key : dimTag.keySet()) {
                     BlockPos pos = BlockPos.of(Long.parseLong(key));
-                    dimTag.getCompound(key).ifPresent(snapNbt -> posMap.put(pos, deserializeSnapshot(snapNbt)));
+                    CompoundTag snapNbt = dimTag.getCompound(key).orElseThrow();
+                    posMap.put(pos, deserializeSnapshot(snapNbt));
                 }
                 containers += posMap.size();
                 database.put(dim, posMap);
@@ -64,30 +64,32 @@ public class Serializer {
         return database;
     }
 
-    public void write(Map<String, Map<BlockPos, ContainerSnapshot>> database) {
-        if (file == null) return;
-
-        CompoundTag root = new CompoundTag();
-        database.forEach((dim, posMap) -> {
-            CompoundTag dimTag = new CompoundTag();
-            posMap.forEach((pos, snap) -> dimTag.put(String.valueOf(pos.asLong()), serializeSnapshot(snap)));
-            root.put(dim, dimTag);
-        });
+    public boolean write(Map<String, Map<BlockPos, ContainerSnapshot>> database) {
+        // Enforce this for every caller, including periodic saves and cleanup.
+        if (file == null || !loadSucceeded) return false;
 
         Path tmp = file.resolveSibling(file.getFileName().toString() + ".tmp");
         try {
+            CompoundTag root = new CompoundTag();
+            database.forEach((dim, posMap) -> {
+                CompoundTag dimTag = new CompoundTag();
+                posMap.forEach((pos, snap) -> dimTag.put(String.valueOf(pos.asLong()), serializeSnapshot(snap)));
+                root.put(dim, dimTag);
+            });
             NbtIo.writeCompressed(root, tmp);
             try {
                 Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             } catch (java.nio.file.AtomicMoveNotSupportedException e) {
                 Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
             }
+            return true;
         } catch (Exception e) {
             Stashlight.LOGGER.error("Save failed", e);
             try {
                 Files.deleteIfExists(tmp);
             } catch (Exception ignored) {
             }
+            return false;
         }
     }
 
@@ -106,42 +108,27 @@ public class Serializer {
     }
 
     private ContainerSnapshot deserializeSnapshot(CompoundTag nbt) {
-        String name = nbt.getStringOr(NBT_CONTAINER_NAME_KEY, "");
-        int capacity = nbt.getIntOr(NBT_CONTAINER_CAPACITY_KEY, 0);
-        long timestamp = nbt.getLongOr(NBT_TIMESTAMP_KEY, 0L);
+        String name = nbt.getString(NBT_CONTAINER_NAME_KEY).orElseThrow();
+        int capacity = nbt.getInt(NBT_CONTAINER_CAPACITY_KEY).orElseThrow();
+        long timestamp = nbt.getLong(NBT_TIMESTAMP_KEY).orElseThrow();
 
         List<ItemStack> items = new ArrayList<>();
-        nbt.getList(NBT_STACK_LIST_KEY).ifPresent(itemList -> {
-            for (int i = 0; i < itemList.size(); i++) {
-                itemList.getCompound(i)
-                        .map(this::deserializeStack)
-                        .ifPresent(items::add);
-            }
-        });
+        ListTag itemList = nbt.getList(NBT_STACK_LIST_KEY).orElseThrow();
+        for (int i = 0; i < itemList.size(); i++) {
+            items.add(deserializeStack(itemList.getCompound(i).orElseThrow()));
+        }
         return new ContainerSnapshot(name, capacity, items, timestamp);
     }
 
     private Tag serializeStack(ItemStack stack) {
-        try {
-            var ops = RegistryOps.create(NbtOps.INSTANCE, lookup);
-            return ItemStack.CODEC.encodeStart(ops, stack)
-                    .resultOrPartial(error -> Stashlight.LOGGER.warn("Failed to serialize item: {}", error))
-                    .orElse(new CompoundTag());
-        } catch (Exception e) {
-            Stashlight.LOGGER.warn("ItemStack serialization failed for {}", stack.getItem(), e);
-            return new CompoundTag();
-        }
+        var ops = RegistryOps.create(NbtOps.INSTANCE, lookup);
+        // Abort the save instead of replacing an unencodable item with an empty compound.
+        return ItemStack.CODEC.encodeStart(ops, stack).getOrThrow();
     }
 
     private ItemStack deserializeStack(CompoundTag nbt) {
-        try {
-            var ops = RegistryOps.create(NbtOps.INSTANCE, lookup);
-            return ItemStack.CODEC.parse(ops, nbt)
-                    .resultOrPartial(error -> Stashlight.LOGGER.warn("Failed to deserialize item: {}", error))
-                    .orElse(ItemStack.EMPTY);
-        } catch (Exception e) {
-            Stashlight.LOGGER.warn("ItemStack deserialization failed", e);
-            return ItemStack.EMPTY;
-        }
+        var ops = RegistryOps.create(NbtOps.INSTANCE, lookup);
+        // Let read() protect the original file if even one item fails to decode.
+        return ItemStack.CODEC.parse(ops, nbt).getOrThrow();
     }
 }

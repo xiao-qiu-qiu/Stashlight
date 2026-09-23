@@ -11,6 +11,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -163,8 +164,9 @@ public class ContainerRepository {
         cleanupExecutor.submit(() -> {
             try {
                 synchronized (CONTAINER_ENTRIES_MAP) {
-                    serializer.write(CONTAINER_ENTRIES_MAP);
-                    this.isDirty = false;
+                    if (serializer.write(CONTAINER_ENTRIES_MAP)) {
+                        this.isDirty = false;
+                    }
                 }
             } finally {
                 this.isSavePending = false;
@@ -201,23 +203,25 @@ public class ContainerRepository {
     }
 
     public void shutdown() {
+        // Queue a final flush after any in-flight save. Disk I/O stays on the worker.
+        var finalSave = cleanupExecutor.submit(() -> {
+            synchronized (CONTAINER_ENTRIES_MAP) {
+                if (isDirty && serializer.write(CONTAINER_ENTRIES_MAP)) {
+                    isDirty = false;
+                }
+            }
+        });
         cleanupExecutor.shutdown();
         try {
             if (!cleanupExecutor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
                 Stashlight.LOGGER.warn("Stashlight cleanup executor did not finish in time");
+                // Do not let a rejoin load stale data while the previous session is still writing.
+                finalSave.get();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-        }
-
-        if (!serializer.loadSucceeded()) {
-            Stashlight.LOGGER.warn("Skipping cache save because the file failed to load");
-            return;
-        }
-
-        synchronized (CONTAINER_ENTRIES_MAP) {
-            serializer.write(CONTAINER_ENTRIES_MAP);
-            this.isDirty = false;
+        } catch (ExecutionException e) {
+            Stashlight.LOGGER.error("Final cache save failed", e.getCause());
         }
     }
 }

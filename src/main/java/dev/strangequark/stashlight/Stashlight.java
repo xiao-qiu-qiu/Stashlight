@@ -40,7 +40,9 @@ import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 public class Stashlight implements ClientModInitializer {
     public static final String MOD_ID = "stashlight";
@@ -55,6 +57,13 @@ public class Stashlight implements ClientModInitializer {
 
     @Nullable
     private BlockPos lastOpened;
+    @Nullable
+    private ClientLevel lastOpenedLevel;
+
+    private final Map<Screen, ContainerContext> openContainers = new WeakHashMap<>();
+
+    private record ContainerContext(ClientLevel level, ContainerRepository repository, BlockPos pos) {
+    }
 
     @Override
     public void onInitializeClient() {
@@ -112,16 +121,25 @@ public class Stashlight implements ClientModInitializer {
             HighlightManager.clearAll();
             LitematicaCompat.clear();
             lastOpened = null;
+            lastOpenedLevel = null;
+            openContainers.clear();
             serializer = null;
             repository = null;
         });
     }
 
     private InteractionResult onBlockUsed(Player player, Level level, InteractionHand interactionHand, BlockHitResult blockHitResult) {
+        // UseBlockCallback also runs on the integrated server. Only track local interactions.
+        Minecraft client = Minecraft.getInstance();
+        if (level != client.level || player != client.player) return InteractionResult.PASS;
+
+        lastOpened = null;
+        lastOpenedLevel = null;
         BlockPos pos = blockHitResult.getBlockPos();
         BlockState state = level.getBlockState(pos);
         if (Util.isValidSearchableContainer(state)) {
-            lastOpened = pos;
+            lastOpened = pos.immutable();
+            lastOpenedLevel = client.level;
             HighlightManager.removeContainer(level, pos);
         }
         return InteractionResult.PASS;
@@ -142,40 +160,54 @@ public class Stashlight implements ClientModInitializer {
 
     private void onScreenInit(Minecraft client, Screen screen, int w, int h) {
         LitematicaCompat.observeScreen(screen);
+        BlockPos pendingPos = lastOpened;
+        ClientLevel pendingLevel = lastOpenedLevel;
+        lastOpened = null;
+        lastOpenedLevel = null;
         if (client.level == null || client.player == null || screen instanceof CreativeModeInventoryScreen) {
             return;
         }
 
         if (screen instanceof AbstractContainerScreen<?> handled) {
             var handler = handled.getMenu();
-            if (handler != client.player.inventoryMenu) {
-                ScreenEvents.afterExtract(screen).register(MaterialSlotHighlight::extract);
+            // A failed chest interaction must never turn the player's inventory into a chest snapshot.
+            if (handler == client.player.inventoryMenu) return;
+            ScreenEvents.afterExtract(screen).register(MaterialSlotHighlight::extract);
+
+            // Screen events reset on resize; retain the original association across reinitialization.
+            if (!openContainers.containsKey(screen) && pendingPos != null
+                    && pendingLevel == client.level && repository != null) {
+                openContainers.put(screen, new ContainerContext(client.level, repository, pendingPos));
             }
+            ContainerContext context = openContainers.get(screen);
+            if (context == null) return;
             // Serialize on close to ensure the database reflects the final state of the inventory.
-            ScreenEvents.remove(screen).register(closedScreen -> serializeContainer(client, handler));
+            ScreenEvents.remove(screen).register(closedScreen -> {
+                if (openContainers.remove(closedScreen) != null) {
+                    serializeContainer(client, handler, context);
+                }
+            });
         }
     }
 
-    private void serializeContainer(Minecraft client, AbstractContainerMenu handler) {
-        if (client.level == null || repository == null || lastOpened == null) {
+    private void serializeContainer(Minecraft client, AbstractContainerMenu handler, ContainerContext context) {
+        if (client.level != context.level() || repository != context.repository()) {
             return;
         }
 
         String dimension = Util.getDimensionName(client.level);
-        Set<BlockPos> pair = Util.resolveContainerPositions(client.level, lastOpened);
+        Set<BlockPos> pair = Util.resolveContainerPositions(client.level, context.pos());
         BlockPos canonicalPos = Util.getCanonicalPos(client.level, pair.iterator().next());
         BlockState blockstate = client.level.getBlockState(canonicalPos);
 
 
         if (!Util.isValidSearchableContainer(blockstate)) {
-            lastOpened = null;
             return;
         }
 
         var stacks = handler.getItems();
         int containerSize = stacks.size() - 36;
         if (containerSize <= 0) {
-            lastOpened = null;
             return;
         }
 
@@ -193,7 +225,5 @@ public class Stashlight implements ClientModInitializer {
                 containerSize,
                 stacks.subList(0, containerSize)
         );
-
-        lastOpened = null;
     }
 }

@@ -47,6 +47,32 @@ tasks.withType(JavaCompile).configureEach {
     it.options.release = 25
 }
 
+// Keep the standalone checks separate from framework-discovered unit tests.
+sourceSets {
+    cacheRegression {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+    }
+}
+
+tasks.register("cacheRegressionTest", JavaExec) {
+    group = "verification"
+    description = "Runs the no-framework cache persistence regression checks."
+    dependsOn(tasks.named("cacheRegressionClasses"))
+    // This entry point has no test framework/runtime-only dependencies. Using the
+    // already-resolved compile classpath keeps the check runnable with --offline.
+    classpath = sourceSets.cacheRegression.runtimeClasspath
+    mainClass = "dev.strangequark.stashlight.persistence.RegressionChecks"
+    workingDir = file("$buildDir/cache-regression")
+    doFirst {
+        file("$buildDir/cache-regression").mkdirs()
+    }
+}
+
+tasks.named("check") {
+    dependsOn(tasks.named("cacheRegressionTest"))
+}
+
 java {
     // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
     // if it is present.
