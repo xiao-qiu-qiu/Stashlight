@@ -36,7 +36,7 @@ Commit message types used in this repo: `feat`, `fix`, `port`, `docs`, `chore`.
 | Item | Value |
 | --- | --- |
 | Minecraft | `26.1` (`minecraft_version` in `gradle.properties`) |
-| Mod version / jar | `26.1.5` → `build/libs/Stashlight-26.1.5.jar` |
+| Mod version / jar | `26.1.6` → `build/libs/Stashlight-26.1.6.jar` |
 | Loader | Fabric Loader `0.18.5` |
 | Fabric API | `0.144.3+26.1` |
 | owo-lib | `0.13.0+26.1` (Wisp Forest Maven + `owo-sentinel` bundled via `include`) |
@@ -51,7 +51,7 @@ Build:
 .\gradlew.bat build
 ```
 
-Runnable / installable jar: `build/libs/Stashlight-26.1.5.jar` (not `*-sources.jar`). Bump `mod_version` in `gradle.properties` when cutting a new jar.
+Runnable / installable jar: `build/libs/Stashlight-26.1.6.jar` (not `*-sources.jar`). Bump `mod_version` in `gradle.properties` when cutting a new jar.
 
 Dependencies: Fabric API and owo-lib are required at runtime. The mod is **client-only** (`environment: client`).
 
@@ -94,7 +94,7 @@ Lang files: `src/main/resources/assets/stashlight/lang/en_us.json`, `zh_cn.json`
 - **Dimension key is the identifier path only** (`overworld`, `the_nether`, `the_end`), not `minecraft:overworld`. Filters, highlights, and cache keys all use this. Highlighting refuses a different dimension (action-bar message).
 - **Nested search** is live on the `ItemStack` (`DataComponents.CONTAINER` / `BUNDLE_CONTENTS`), not a second index.
 - **Saves are off-thread.** `NbtIo.writeCompressed` must not run on the render thread. `isSavePending` prevents overlapping saves. `shutdown()` on disconnect flushes then awaits the executor (5s).
-- **Cleanup every 100 ticks** (loaded chunks only): if the block is no longer a searchable container, drop it. Persist every 3000 ticks if dirty.
+- **Cleanup every 100 ticks in singleplayer only** (loaded chunks only): if the block is no longer a searchable container, drop it. Never delete multiplayer cache entries based only on client-visible block state: anti-xray plugins can disguise real containers as stone or air. Multiplayer entries are updated on container close and removed by the local block-break hook. Persist every 3000 ticks if dirty.
 - **Cache files:** singleplayer = world folder name; multiplayer = `MP_<ip>` with `:` / `/` replaced. Stored under `.minecraft/stashlight_cache/*.dat`.
 - **owo-ui + Mojang mappings + Java 25 + MC 26.1 render pipeline.** Highlights use a dedicated `RenderPipeline`, shader, and immediate pass to the main color target after world compositing. Keep them out of shared world buffers so Iris does not composite over them. Use the actual frame's projection/view matrices; do not mix Yarn names.
 

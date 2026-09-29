@@ -6,6 +6,7 @@ import dev.strangequark.stashlight.model.IndexedItem;
 import dev.strangequark.stashlight.model.StackKey;
 import dev.strangequark.stashlight.serializer.Serializer;
 import dev.strangequark.stashlight.util.Util;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
@@ -43,6 +44,11 @@ public class ContainerRepository {
     }
 
     public void runCleanup(ClientLevel world) {
+        // Remote servers may disguise real containers as stone or air (anti-xray).
+        // A client-visible replacement is not evidence that the container was removed.
+        // Keep multiplayer snapshots until an interaction updates or removes them.
+        if (!Minecraft.getInstance().isSingleplayer()) return;
+
         String dimension = Util.getDimensionName(world);
         Map<BlockPos, ContainerSnapshot> dataMap = CONTAINER_ENTRIES_MAP.get(dimension);
 
