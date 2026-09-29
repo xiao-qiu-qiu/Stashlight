@@ -35,8 +35,9 @@ Commit message types used in this repo: `feat`, `fix`, `port`, `docs`, `chore`.
 
 | Item | Value |
 | --- | --- |
-| Minecraft | `26.1` (`minecraft_version` in `gradle.properties`) |
-| Mod version / jar | `26.1.6` → `build/libs/Stashlight-26.1.6.jar` |
+| Minecraft | Compile dependency: `26.1` (`minecraft_version`); distribution target: `26.1.2` (`minecraft_target_version`) |
+| Jar filename | `build/libs/Stashlight-26.1.2-fabric-yyyyMMdd-HHmmss.jar` (build time in `Asia/Shanghai`) |
+| Internal mod version | `mod_version` in `gradle.properties`; independent of the jar filename |
 | Loader | Fabric Loader `0.18.5` |
 | Fabric API | `0.144.3+26.1` |
 | owo-lib | `0.13.0+26.1` (Wisp Forest Maven + `owo-sentinel` bundled via `include`) |
@@ -51,7 +52,7 @@ Build:
 .\gradlew.bat build
 ```
 
-Runnable / installable jar: `build/libs/Stashlight-26.1.6.jar` (not `*-sources.jar`). Bump `mod_version` in `gradle.properties` when cutting a new jar.
+Runnable / installable jar: `build/libs/Stashlight-<minecraft_target_version>-fabric-<build time>.jar` (not `*-sources.jar`). The timestamp uses `yyyyMMdd-HHmmss` in `Asia/Shanghai`, shared by all jars in one Gradle invocation. The Minecraft filename label is not a mod version; do not increment it for mod fixes. `mod_version` controls internal Fabric metadata separately.
 
 Dependencies: Fabric API and owo-lib are required at runtime. The mod is **client-only** (`environment: client`).
 

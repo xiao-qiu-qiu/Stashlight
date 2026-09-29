@@ -10,6 +10,13 @@ base {
     archivesName = project.archives_base_name
 }
 
+// One timestamp per invocation, shared by the installable jar and sources jar.
+def buildTimestamp = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Shanghai"))
+        .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+tasks.withType(Jar).configureEach {
+    archiveVersion = "${project.minecraft_target_version}-fabric-${buildTimestamp}"
+}
+
 repositories {
     // Add repositories to retrieve artifacts from in here.
     // You should only use this when depending on other mods because
